@@ -47,7 +47,7 @@ def get_phonetics(size):
                 phonetics = re.search("> *(\D)+<", match.group(0)).group(0)
                 phonetics = phonetics[1:len(phonetics) - 1].replace("-", "").replace("</span>", "")
 
-                if not "+" in phonetics:
+                if not "+" or "\"" in phonetics:
                     all_phonetics_tuples.append([phonetics, word])
                     print("added")
 
