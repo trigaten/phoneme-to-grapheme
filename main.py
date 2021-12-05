@@ -1,10 +1,13 @@
 
-# import pdfplumber
 import os
 import requests as rq
 import re
 import numpy as np
 import bs4
+import sys
+import codecs
+import csv
+sys.stdout = codecs.getwriter("iso-8859-1")(sys.stdout, 'xmlcharrefreplace')
 
 headers = {'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"}
 
@@ -105,11 +108,17 @@ while len(all_phonetics_tuples) < size_original:
 
 csv = str(all_phonetics_tuples)
 
-#Manually make CSV
+#Manually make CSV because none of the default libraries work for phonetics
 csv_str = []
 
 for i in range(1, 999):
     j = 2*i
     csv_str.append(str(csv[j + 1])+ "," +str(csv[j+2]))
 
-#export csv_str as a file separated by ","
+#Export csv_str as a utf-8-sig formated file separated by ","
+with codecs.open("phonemes-words.csv", "w", "utf-8-sig") as text_file:
+    for line in csv_str:
+        line = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ)*", "", line)
+        text_file.write(line+"\n")
+
+text_file.close()
