@@ -33,7 +33,6 @@ def get_phonetics(size):
                 new_num = np.random.randint(0, high=dict_len)
 
             #Add the new, unique number to the rand_nums list
-            rand_nums.append(new_num)
             word = dictionary[new_num]
             #changes the base url to include the new word to get that word from the website
             modified_url = url + word
@@ -59,9 +58,9 @@ def get_phonetics(size):
                     phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ|</span>|-)*", "", phonetics)
 
                     #Some words included a + in them, so we removed those.
-                    if not "+" or not "\"" in phonetics:
-                        all_phonetics_tuples.append([str(phonetics) + "," + str(word)])
-                        print("Added")
+                    all_phonetics_tuples.append([str(phonetics) + "," + str(word)])
+                    rand_nums.append(new_num)
+                    print("Added")
 
                 except:
                     #Show that an error has occured
@@ -72,11 +71,6 @@ def get_phonetics(size):
 
 #Main function to get all of the phonetics
 get_phonetics(size_original)
-
-#Keep getting more phonetics until the size is reached
-while len(all_phonetics_tuples) < size_original:
-    size = size_original - len(all_phonetics_tuples)
-    get_phonetics(size)
 
 #Manually make CSV because none of the default libraries work for phonetics
 csv = all_phonetics_tuples
