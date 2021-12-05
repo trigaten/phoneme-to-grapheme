@@ -1,4 +1,3 @@
-
 import os
 import requests as rq
 import re
@@ -35,8 +34,9 @@ def get_phonetics(size):
 
             #Add the new, unique number to the rand_nums list
             rand_nums.append(new_num)
+            word = dictionary[new_num]
             #changes the base url to include the new word to get that word from the website
-            modified_url = url + dictionary[new_num]
+            modified_url = url + word
             curr_page = rq.get(modified_url, headers=headers)
 
             #Check that the page is valid
@@ -60,12 +60,12 @@ def get_phonetics(size):
 
                     #Some words included a + in them, so we removed those.
                     if not "+" or not "\"" in phonetics:
-                        all_phonetics_tuples.append([str(phonetics), str(word)])
-                        print("Added def")
+                        all_phonetics_tuples.append([str(phonetics) + "," + str(word)])
+                        print("Added")
 
                 except:
                     #Show that an error has occured
-                    print("something went wrong" )
+                    print("Something went wrong")
                 return curr_page.content
 
         web_result = get_dictionary_html()
@@ -84,7 +84,8 @@ csv = all_phonetics_tuples
 #Export csv_str as a utf-8-sig formated file separated by ","
 with codecs.open("phonemes-words.csv", "w", "utf-8-sig") as text_file:
     for line in csv:
-        line = str(line)
+        line = re.sub(r"(\[|\]|\"|\')*", "", str(line))
         text_file.write(line+"\n")
 
 text_file.close()
+
