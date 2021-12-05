@@ -102,3 +102,14 @@ get_phonetics(size_original)
 while len(all_phonetics_tuples) < size_original:
     size = size_original - len(all_phonetics_tuples)
     get_phonetics(size)
+
+csv = str(all_phonetics_tuples)
+
+#Manually make CSV
+csv_str = []
+
+for i in range(1, 999):
+    j = 2*i
+    csv_str.append(str(csv[j + 1])+ "," +str(csv[j+2]))
+
+#export csv_str as a file separated by ","
