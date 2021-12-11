@@ -44,6 +44,7 @@ new_size = size_original
 if append_or_write == "a":
     new_size -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
 
+
 # This is the main function to get the html files of size "size"
 def get_urls(size):
     empty_set = set([None])  # Empty set used to remove empty sets from lists
@@ -154,12 +155,14 @@ def get_all(urls):
         else:
             print('{}: {}'.format(fut.result(), 'OK'))
 
+
 #   Will write the notes for this part and below later
 def remove_invalids():
     # global total_failed, words_added, new_size
     new_fails = total_failed
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
-    lines = re.sub(r"(\n([a-z][A-Z])*\n)", "\n", fix_lines).replace(r"﻿", "").split("\n")
+    lines = re.sub(r"(\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat| )*", "",
+                   fix_lines).replace(r"﻿", "").split("\n")
     new_lines = []
 
     for line in lines:
