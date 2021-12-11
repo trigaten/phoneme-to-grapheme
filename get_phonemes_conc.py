@@ -20,7 +20,7 @@ err_filename = "404s.txt"  # List of all of the known error words
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
 # Change this value to change the dataset size
-size_original = 30700
+size_original = 1
 
 # Do the initial parsing of the dictionary file
 dictionary_file = open(dictionary_name).read()
@@ -136,7 +136,7 @@ def get_word(curr_page, word):
 import concurrent.futures  # This import is important for concurrency.
 
 
-# This method is used to equest and process one url at a time
+# This method is used to request and process one url at a time
 def get_one(url):
     curr_page = requests.get(url)
     get_word(curr_page, url.replace(original_url, ""))
@@ -158,7 +158,6 @@ def get_all(urls):
 
 #   Will write the notes for this part and below later
 def remove_invalids():
-    # global total_failed, words_added, new_size
     new_fails = total_failed
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
     lines = re.sub(r"(\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat| )*", "",
@@ -201,6 +200,7 @@ def remove_invalids():
     print("Total_Purged:\t\t" + str(purged))
 
     end_block = codecs.open(write_file, "w", "utf-8-sig")
+    end_block.write("phonemes,graphemes\n")
     for line in final_set:
         end_block.write(str(line) + "\n")
     end_block.close()
