@@ -16,7 +16,7 @@ err_filename = "404s.txt"
 
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-size_original = 100 #Change this value to change the dataset size
+size_original = 30000 #Change this value to change the dataset size
 
 
 dictionary_file = open(dictionary_name).read()
@@ -27,7 +27,7 @@ write_file = "phonemes-words.csv"
 #change the "w" option to "a" to add more to the current file
 #change  the "a" option to "w" to erase the file and start from scratch
 text_file = codecs.open(write_file, "w", "utf-8-sig")
-not_found = codecs.open(err_filename, "a", "utf-8-sig")
+not_found = codecs.open(err_filename, "a")
 
 #Used to keep track of the total number of words added
 int_total = []
@@ -56,20 +56,22 @@ def get_urls(size):
 
     return return_set
 
-def get_word(curr_page, word):
+total_failed = []
 
-    if curr_page.status_code == 404:
-        not_found = codecs.open(err_filename, "a", "utf-8-sig")
+def get_word(curr_page, word):
+    def add_err():
+        not_found = codecs.open(err_filename, "a")
         not_found.write(word + "\n")
         not_found.close()
-        print("Failed: " + word)
-        return
+        total_failed.append(" ")
+        print("Failed: " + word + " : " + str(0 - len(total_failed)) + "\n")
+
+    if curr_page.status_code == 404:
+        add_err()
         # print("Error 404")
         # If the page was not valid, try another number combination
 
     else:
-        int_total.append("")
-        print("Words Left : " + str(size_original - len(int_total)))
         # Return the new word and page
         web_result = curr_page.content
         soup = bs4.BeautifulSoup(web_result, "html.parser")
@@ -77,6 +79,9 @@ def get_word(curr_page, word):
         phonetics = soup.find_all('span', {'class': 'pr'})
 
         if len(phonetics) >= 1 and len(word_soup) >= 1:
+            int_total.append("")
+            print("Words Left : " + str(size_original - len(int_total)))
+
             actual_word = word_soup[0].text.lower()
             phonetics = phonetics[0].text
 
@@ -90,6 +95,9 @@ def get_word(curr_page, word):
             text_file.close()
 
             return return_word
+
+        else:
+            add_err()
 
 #Main function to get all of the phonetics
 
@@ -114,6 +122,10 @@ def get_all(urls):
 
 ran_i = []
 def phon(size):
+    dictionary_file = open(dictionary_name).read()
+    dictionary = dictionary_file.split("\n")
+    dict_len = len(dictionary)
+
     ran_i.append("")
     print("Again: " + str(len(ran_i)))
     urls = get_urls(size)
@@ -143,8 +155,13 @@ def remove_invalids():
     remove_set = set()
     remove_lines = remove_lines[:len(remove_lines) - 1]
 
+    not_found = codecs.open(err_filename, "a")
     for remove in remove_lines:
         remove_set.add(str(remove[0]) + "," + str(remove[1]))
+        not_found.write(str(remove[1]))
+        total_failed.append("")
+
+    not_found.close()
 
     final_set = set(lines) - remove_set - set([""])
 
