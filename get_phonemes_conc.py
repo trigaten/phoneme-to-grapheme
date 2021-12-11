@@ -124,7 +124,7 @@ def get_word(curr_page, word):
 
 import concurrent.futures
 
-
+# This method is used to equest and process one url at a time
 def get_one(url):
     curr_page = requests.get(url)
     get_word(curr_page, url.replace(original_url, ""))
