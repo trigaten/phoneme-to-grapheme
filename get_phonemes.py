@@ -11,7 +11,7 @@ url = "https://www.merriam-webster.com/dictionary/"  # URL to get words and phon
 filename = "words_alpha.txt"
 fileDir = os.path.dirname(os.path.realpath('words_alpha.txt'))
 
-size_original = 10000 - 9174  # Change this value to change the dataset size
+size_original = 10000 - 9983  # Change this value to change the dataset size
 
 dictionary_file = open("words_alpha.txt").read()
 dictionary = dictionary_file.split("\n")
@@ -24,6 +24,7 @@ not_found = codecs.open("404s.txt", "a", "utf-8-sig")
 
 
 def get_phonetics(size):
+    text_file = codecs.open("phonemes-words.csv", "a", "utf-8-sig")
     rand_nums = []  # used to prevent the same word from being included in the set more than once
 
     while (len(rand_nums) < size):
@@ -61,7 +62,7 @@ def get_phonetics(size):
                 if "," in phonetics:
                     phonetics = phonetics.split(",")[0]
 
-                fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|‧)*", "", phonetics)
+                fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\|‧)*", "", phonetics)
 
                 if len(str(fixed_phonetics)) >= 1:
                     return_csv = fixed_phonetics + "," + actual_word
@@ -70,6 +71,7 @@ def get_phonetics(size):
                     all_phonetics_tuples.append(return_csv)
                     print(len(all_phonetics_tuples))
                     rand_nums.append(new_num)
+    text_file.close()
 
 
 # Main function to get all of the phonetics
@@ -77,8 +79,6 @@ get_phonetics(size_original)
 
 # Manually make CSV because none of the default libraries work for phonetics
 csv = all_phonetics_tuples
-
-text_file.close()
 
 def remove_invalids():
     fix_lines = codecs.open("phonemes-words.csv", "r", "utf-8-sig").read()
@@ -103,7 +103,7 @@ def remove_invalids():
 
     final_set = set(lines) - remove_set - set([""])
 
-    end_block = codecs.open("final_phonemes.csv", "w", "utf-8-sig")
+    end_block = codecs.open("phonemes-words.csv", "w", "utf-8-sig")
     for line in final_set:
         end_block.write(str(line) + "\n")
     end_block.close()
@@ -113,6 +113,9 @@ def remove_invalids():
 
 fixed_set = remove_invalids()
 
-while len(fixed_set) < size_original:
-    get_phonetics(size_original - len(fixed_set))
+#familypronunciation
+#pronunciation
+
+while len(fixed_set) < 10000:
+    get_phonetics(10000 - len(fixed_set))
     fixed_set = remove_invalids()
