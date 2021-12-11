@@ -106,7 +106,7 @@ def get_word(curr_page, word):
                 phonetics = phonetics.split(",")[0]
 
             # Remove all invalid characters
-            fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧)*", "", phonetics)
+            fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat)*", "", phonetics)
             # Combine the words into one line for CSV preparation
             csv_formatted = fixed_phonetics + "," + actual_word
 
