@@ -8,7 +8,7 @@ import concurrent.futures
 import requests
 import time
 start_time = time.time()
-#Basic Background Info
+#Basic Background InfoF
 headers = {'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0"}
 original_url = "https://www.merriam-webster.com/dictionary/" #URL to get words and phonetics from
 dictionary_name = "words_beta.txt"
@@ -19,18 +19,19 @@ fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 size_original = 100 #Change this value to change the dataset size
 
 
-dictionary_file = open("words_beta.txt").read()
+dictionary_file = open(dictionary_name).read()
 dictionary = dictionary_file.split("\n")
 dict_len = len(dictionary)
+write_file = "phonemes-words.csv"
 
 #change the "w" option to "a" to add more to the current file
 #change  the "a" option to "w" to erase the file and start from scratch
-text_file = codecs.open("phonemes-words.csv", "w", "utf-8-sig")
+text_file = codecs.open(write_file, "w", "utf-8-sig")
 not_found = codecs.open(err_filename, "a", "utf-8-sig")
 
 #Used to keep track of the total number of words added
 int_total = []
-
+fixed_set = []
 #This is the main function to get the html files of size "size"
 def get_urls(size):
     empty_set = set([None])
@@ -55,19 +56,20 @@ def get_urls(size):
 
     return return_set
 
-
 def get_word(curr_page, word):
-    int_total.append("")
-    print("URL #: " + str(len(int_total)))
 
     if curr_page.status_code == 404:
+        not_found = codecs.open(err_filename, "a", "utf-8-sig")
         not_found.write(word + "\n")
-        print(word)
+        not_found.close()
+        print("Failed: " + word)
         return
         # print("Error 404")
         # If the page was not valid, try another number combination
 
     else:
+        int_total.append("")
+        print("Words Left : " + str(size_original - len(int_total)))
         # Return the new word and page
         web_result = curr_page.content
         soup = bs4.BeautifulSoup(web_result, "html.parser")
@@ -83,7 +85,7 @@ def get_word(curr_page, word):
 
             fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧)*", "", phonetics)
             return_word = fixed_phonetics + "," + actual_word
-            text_file = codecs.open("phonemes-words.csv", "a", "utf-8-sig")
+            text_file = codecs.open(write_file, "a", "utf-8-sig")
             text_file.write(return_word + "\n")
             text_file.close()
 
@@ -110,9 +112,10 @@ def get_all(urls):
         else:
             print('{}: {}'.format(fut.result(), 'OK'))
 
-ran_i = 0
+ran_i = []
 def phon(size):
-    print("again" + str(ran_i))
+    ran_i.append("")
+    print("Again: " + str(len(ran_i)))
     urls = get_urls(size)
     get_all(urls)
 
@@ -122,7 +125,7 @@ phon(size_original)
 text_file.close()
 
 def remove_invalids():
-    fix_lines = codecs.open("phonemes-words.csv", "r", "utf-8-sig").read()
+    fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
     lines = fix_lines.replace("﻿", "").split("\n")
     new_lines = []
 
@@ -145,7 +148,7 @@ def remove_invalids():
 
     final_set = set(lines) - remove_set - set([""])
 
-    end_block = codecs.open("phonemes-words.csv", "w", "utf-8-sig")
+    end_block = codecs.open(write_file, "w", "utf-8-sig")
     for line in final_set:
         end_block.write(str(line) + "\n")
     end_block.close()
@@ -161,7 +164,9 @@ fixed_set = remove_invalids()
 while len(fixed_set) < size_original:
     phon(size_original - len(fixed_set))
     fixed_set = remove_invalids()
+    int_total = int_total[:len(fixed_set)]
 
+# not_found.close()
 total_time = time.time() - start_time
 print(total_time)
 
@@ -169,10 +174,13 @@ time_file = codecs.open("conc_timing.txt", "a")
 time_file.write(str(total_time) + "\n")
 time_file.close()
 
-a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().split("\n"))
+a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 err = set(codecs.open(err_filename, "r", "utf-8-sig").read().split("\n"))
 b_write = codecs.open(dictionary_name, "w", "utf-8-sig")
 
 new_dict_set = a_dict - err
-[b_write.write(word) for word in new_dict_set]
+
+for word in new_dict_set:
+    b_write.write(word + "\n")
+
 b_write.close()

@@ -11,13 +11,13 @@ start_time = time.time()
 # Basic Background Info
 headers = {'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0"}
 url = "https://www.merriam-webster.com/dictionary/"  # URL to get words and phonetics from
-filename = "words_alpha.txt"
+dict_filename = "words_beta.txt"
 fileDir = os.path.dirname(os.path.realpath('words_alpha.txt'))
 phon_file_name = "old-phonemes.csv"
 
 size_original = 100  # Change this value to change the dataset size
 
-dictionary_file = open("words_alpha.txt").read()
+dictionary_file = open(dict_filename).read()
 dictionary = dictionary_file.split("\n")
 dict_len = len(dictionary)
 all_phonetics_tuples = []
@@ -132,7 +132,7 @@ time_file = codecs.open("timing.txt", "a")
 time_file.write(str(total_time) + "\n")
 time_file.close()
 
-a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().split("\n"))
+a_dict = set(codecs.open(dict_filename, "r", "utf-8-sig").read().split("\n"))
 err = set(codecs.open("404s.txt", "r", "utf-8-sig").read().split("\n"))
 b_write = codecs.open("words_beta.txt", "w", "utf-8-sig")
 
