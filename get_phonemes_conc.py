@@ -20,7 +20,7 @@ err_filename = "404s.txt"  # List of all of the known error words
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
 # Change this value to change the dataset size
-size_original = 30000
+size_original = 30600
 
 # Do the initial parsing of the dictionary file
 dictionary_file = open(dictionary_name).read()
@@ -37,6 +37,12 @@ append_or_write = "a"
 words_added = 0  # Used to keep track of the total number of words added
 fixed_set = []  # Set of words added to the phonetics
 
+# Used to subtract the size of any existing sets from the amount we need to find.
+new_size = size_original
+
+# Separate the file by lines to retrieve the length
+if append_or_write == "a":
+    new_size -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
 
 # This is the main function to get the html files of size "size"
 def get_urls(size):
@@ -76,9 +82,9 @@ def get_word(curr_page, word):
         not_found.write(word + "\n")
         not_found.close()
 
-        global total_failed
+        global total_failed, words_added
         total_failed -= 1  # Decrement the total fails if the page is unavailable.
-        print("Failed:\t\t\t" + str(total_failed) + ":\t\t" + word)
+        print("Failed:\t\t\t" + str("\t") + ":\t\t" + word)
 
     if curr_page.status_code == 404:
         add_err()  #
@@ -86,6 +92,7 @@ def get_word(curr_page, word):
         # If the page was not valid, try another number combination
 
     else:
+
         # Retrieve the word and phonetics from the page using bs4
         web_result = curr_page.content  # Return the new word and page contents
         soup = bs4.BeautifulSoup(web_result, "html.parser")
@@ -94,9 +101,10 @@ def get_word(curr_page, word):
 
         # Check if both words are of valid lengths
         if len(phonetics) >= 1 and len(word_soup) >= 1:
-            global words_added  # Total number of words added
+            global words_added
+            global new_size
+            global total_failed  # Total number of words added
             words_added += 1
-            print("Words Left:\t\t" + str(size_original - new_size + words_added - total_failed))
 
             actual_word = word_soup[0].text.lower()  # Make sure all text is lowercase
             phonetics = phonetics[0].text  # Retrieve phonetics
@@ -116,6 +124,7 @@ def get_word(curr_page, word):
             text_file.write(csv_formatted + "\n")
             text_file.close()
 
+            print("Words Left:\t\t" + str(new_size - words_added - total_failed))
             return csv_formatted  # return the formatted string line
 
         else:
@@ -145,10 +154,9 @@ def get_all(urls):
         else:
             print('{}: {}'.format(fut.result(), 'OK'))
 
-
 #   Will write the notes for this part and below later
 def remove_invalids():
-    global total_failed, words_added
+    # global total_failed, words_added, new_size
     new_fails = total_failed
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
     lines = re.sub(r"(\n([a-z][A-Z])*\n)", "\n", fix_lines).replace(r"﻿", "").split("\n")
@@ -173,21 +181,21 @@ def remove_invalids():
         try:
             remove_set.add(str(remove[0]) + "," + str(remove[1]))
             not_found.write(str(remove[1]) + "\n")
-            total_failed -= 1
 
         except:
             try:
                 not_found.write(str(remove[0]) + "\n")
-                total_failed -= 1
             except:
                 print("This did not work")
 
     not_found.close()
-    purged = new_fails - total_failed
-    words_added -= purged
-    print("Total_Purged:\t\t" + str(purged))
 
     final_set = set(lines) - remove_set - set([""])
+
+    purged = new_fails - total_failed
+    # words_added -= purged
+
+    print("Total_Purged:\t\t" + str(purged))
 
     end_block = codecs.open(write_file, "w", "utf-8-sig")
     for line in final_set:
@@ -197,15 +205,20 @@ def remove_invalids():
     return final_set
 
 
+fixed_set = remove_invalids()  # Removes around 99.9% of invalid lines
 times_phon_was_run = 0
+
 
 # The main function used to request and process phonetics.
 def phon(size):
+    global new_size
     global times_phon_was_run
+    global words_added, total_failed
+    words_added = total_failed = 0
 
+    new_size = size
     dictionary_file = open(dictionary_name).read()
     dictionary = dictionary_file.split("\n")
-    dict_len = len(dictionary)
 
     times_phon_was_run += 1
     print("Again: " + str(times_phon_was_run))
@@ -213,13 +226,6 @@ def phon(size):
     get_all(urls)
 
 
-# Used to subtract the size of any existing sets from the amount we need to find.
-new_size = size_original
-# Separate the file by lines to retrieve the length
-if append_or_write == "a":
-    new_size -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
-
-remove_invalids()  # Removes around 99.9% of invalid lines
 phon(new_size + total_failed)  # Run the main function
 fixed_set = remove_invalids()  # Remove invalids returns all items currently in the phonetics list
 
@@ -239,8 +245,9 @@ time_file.close()
 
 # Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
-err = set(codecs.open(err_filename, "r", "utf-8-sig").read().split("\n"))
 b_write = codecs.open(dictionary_name, "w", "utf-8-sig")
+err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
+err_write = codecs.open(err_filename, "w", "utf-8-sig")
 
 new_dict_set = a_dict - err  # Subtract the set of errors from the beta dictionary
 
@@ -248,5 +255,9 @@ new_dict_set = a_dict - err  # Subtract the set of errors from the beta dictiona
 for word in new_dict_set:
     b_write.write(word + "\n")
 
+for errors in err:
+    err_write.write(errors + "\n")
+
 # Close out the file
 b_write.close()
+err_write.close()
