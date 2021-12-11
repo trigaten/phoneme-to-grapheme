@@ -150,7 +150,7 @@ def remove_invalids():
     global total_failed, words_added
     new_fails = total_failed
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
-    lines = re.sub(r"\n([a-z][A-Z])\n", "\n", fix_lines).replace(r"﻿", "").split("\n")
+    lines = re.sub(r"(\n([a-z][A-Z])*\n|)", "\n", fix_lines).replace(r"﻿", "").split("\n")
     new_lines = []
 
     for line in lines:
