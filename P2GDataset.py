@@ -1,14 +1,9 @@
-import torch
 from torch.utils.data import Dataset
-from torchvision import datasets
-from torchvision.transforms import ToTensor
-import matplotlib.pyplot as plt
 import pandas as pd
 
-
-class Phoneme_Dataset(Dataset):
-    def __init__(self, phoneme_file, transform=None, target_transform=None):
-        self.data = pd.read_csv("phoneme.csv")
+class P2GDataset(Dataset):
+    def __init__(self, phoneme_file):
+        self.data = pd.read_csv(phoneme_file)
 
     def __len__(self):
         return len(self.data)
