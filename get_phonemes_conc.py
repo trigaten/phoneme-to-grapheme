@@ -58,7 +58,7 @@ def get_urls(size):
 
     # Keep getting more urls until the size is reached.
     while len(return_set) < size:
-        print("Return Set Length: " + len(return_set))
+        print("Return Set Length: " + str(len(return_set)))
         return_set.update(get_urls(size - len(return_set)))
 
     return return_set
@@ -78,7 +78,7 @@ def get_word(curr_page, word):
 
         global total_failed
         total_failed -= 1  # Decrement the total fails if the page is unavailable.
-        print("Failed: " + word + " : " + str(total_failed) + "\n")
+        print("Failed:\t\t\t" + str(total_failed) + ":\t\t" + word)
 
     if curr_page.status_code == 404:
         add_err()  #
@@ -96,7 +96,7 @@ def get_word(curr_page, word):
         if len(phonetics) >= 1 and len(word_soup) >= 1:
             global words_added  # Total number of words added
             words_added += 1
-            print("Words Left : " + str(size_original - words_added))
+            print("Words Left:\t\t" + str(size_original - new_size + words_added - total_failed))
 
             actual_word = word_soup[0].text.lower()  # Make sure all text is lowercase
             phonetics = phonetics[0].text  # Retrieve phonetics
@@ -147,10 +147,10 @@ def get_all(urls):
 
 
 def remove_invalids():
-    global total_failed
+    global total_failed, words_added
     new_fails = total_failed
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
-    lines = fix_lines.replace("﻿", "").split("\n")
+    lines = re.sub(r"\n([a-z][A-Z])\n", "\n", fix_lines).replace(r"﻿", "").split("\n")
     new_lines = []
 
     for line in lines:
@@ -175,11 +175,16 @@ def remove_invalids():
             total_failed -= 1
 
         except:
-            not_found.write(str(remove[0]) + "\n")
-            total_failed -= 1
+            try:
+                not_found.write(str(remove[0]) + "\n")
+                total_failed -= 1
+            except:
+                print("This did not work")
 
     not_found.close()
-    print("Total_Purged: " + str(new_fails - total_failed))
+    purged = new_fails - total_failed
+    words_added -= purged
+    print("Total_Purged:\t\t" + str(purged))
 
     final_set = set(lines) - remove_set - set([""])
 
@@ -206,11 +211,13 @@ def phon(size):
     get_all(urls)
 
 
+new_size = size_original
+
 if append_or_write == "a":
-    size_original -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
+    new_size -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
 
 remove_invalids()
-phon(size_original + total_failed)
+phon(new_size + total_failed)
 # Export csv_str as a utf-8-sig formated file separated by ","
 
 text_file = codecs.open(write_file, append_or_write, "utf-8-sig")
@@ -225,7 +232,6 @@ fixed_set = remove_invalids()
 while len(fixed_set) < size_original:
     phon(size_original - len(fixed_set))
     fixed_set = remove_invalids()
-    words_added = len(fixed_set)
 
 # not_found.close()
 total_time = time.time() - start_time
