@@ -4,14 +4,18 @@ import re
 import numpy as np
 import bs4
 import codecs
+import time
+
+start_time = time.time()
 
 # Basic Background Info
 headers = {'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0"}
 url = "https://www.merriam-webster.com/dictionary/"  # URL to get words and phonetics from
 filename = "words_alpha.txt"
 fileDir = os.path.dirname(os.path.realpath('words_alpha.txt'))
+phon_file_name = "old-phonemes.csv"
 
-size_original = 10000 - 9983  # Change this value to change the dataset size
+size_original = 100  # Change this value to change the dataset size
 
 dictionary_file = open("words_alpha.txt").read()
 dictionary = dictionary_file.split("\n")
@@ -19,12 +23,12 @@ dict_len = len(dictionary)
 all_phonetics_tuples = []
 
 # This is the main function to get the html files of size "size"
-text_file = codecs.open("phonemes-words.csv", "a", "utf-8-sig")
+text_file = codecs.open(phon_file_name, "w", "utf-8-sig")
 not_found = codecs.open("404s.txt", "a", "utf-8-sig")
 
 
 def get_phonetics(size):
-    text_file = codecs.open("phonemes-words.csv", "a", "utf-8-sig")
+    text_file = codecs.open(phon_file_name, "a", "utf-8-sig")
     rand_nums = []  # used to prevent the same word from being included in the set more than once
 
     while (len(rand_nums) < size):
@@ -62,7 +66,7 @@ def get_phonetics(size):
                 if "," in phonetics:
                     phonetics = phonetics.split(",")[0]
 
-                fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\|‧|͟|&|1|2|–|—|͟)*", "", phonetics)
+                fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\|‧|͟|&|1|2|–|—|͟||\¦)*", "", phonetics)
 
                 if len(str(fixed_phonetics)) >= 1:
                     return_csv = fixed_phonetics + "," + actual_word
@@ -81,8 +85,8 @@ get_phonetics(size_original)
 csv = all_phonetics_tuples
 
 def remove_invalids():
-    fix_lines = codecs.open("phonemes-words.csv", "r", "utf-8-sig").read()
-    lines = fix_lines.split("\n")
+    fix_lines = codecs.open(phon_file_name, "r", "utf-8-sig").read()
+    lines = fix_lines.replace("﻿", "").split("\n")
     new_lines = []
 
     for line in lines:
@@ -98,12 +102,13 @@ def remove_invalids():
 
     remove_set = set()
     remove_lines = remove_lines[:len(remove_lines) - 1]
+
     for remove in remove_lines:
         remove_set.add(str(remove[0]) + "," + str(remove[1]))
 
     final_set = set(lines) - remove_set - set([""])
 
-    end_block = codecs.open("phonemes-words.csv", "w", "utf-8-sig")
+    end_block = codecs.open(phon_file_name, "w", "utf-8-sig")
     for line in final_set:
         end_block.write(str(line) + "\n")
     end_block.close()
@@ -116,6 +121,21 @@ fixed_set = remove_invalids()
 #familypronunciation
 #pronunciation
 
-while len(fixed_set) < 10000:
-    get_phonetics(10000 - len(fixed_set))
+while len(fixed_set) < size_original:
+    get_phonetics(size_original - len(fixed_set))
     fixed_set = remove_invalids()
+
+total_time = time.time() - start_time
+print(total_time)
+
+time_file = codecs.open("timing.txt", "a")
+time_file.write(str(total_time) + "\n")
+time_file.close()
+
+a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().split("\n"))
+err = set(codecs.open("404s.txt", "r", "utf-8-sig").read().split("\n"))
+b_write = codecs.open("words_beta.txt", "w", "utf-8-sig")
+
+new_dict_set = a_dict - err
+[b_write.write(word) for word in new_dict_set]
+b_write.close()
