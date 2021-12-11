@@ -62,7 +62,7 @@ def get_phonetics(size):
                 if "," in phonetics:
                     phonetics = phonetics.split(",")[0]
 
-                fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\|‧|͟|&|1|2|–)*", "", phonetics)
+                fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\|‧|͟|&|1|2|–|—)*", "", phonetics)
 
                 if len(str(fixed_phonetics)) >= 1:
                     return_csv = fixed_phonetics + "," + actual_word
