@@ -20,7 +20,7 @@ err_filename = "404s.txt"  # List of all of the known error words
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
 # Change this value to change the dataset size
-size_original = 30600
+size_original = 30700
 
 # Do the initial parsing of the dictionary file
 dictionary_file = open(dictionary_name).read()
