@@ -116,14 +116,14 @@ def get_word(curr_page, word):
             text_file.write(csv_formatted + "\n")
             text_file.close()
 
-            return csv_formatted
+            return csv_formatted  # return the formatted string line
 
         else:
             # If the adding part does succeed, then add word to error list
             add_err()
 
 
-import concurrent.futures
+import concurrent.futures  # This import is important for concurrency.
 
 
 # This method is used to equest and process one url at a time
@@ -133,12 +133,12 @@ def get_one(url):
     return curr_page.raise_for_status()
 
 
+#   The concurrent method used to retrieve all urls at a maximum rate of 20 requests
 def get_all(urls):
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         futures = [executor.submit(get_one, url) for url in urls]
-    # the end of the "with" block will automatically wait
-    # for all of the executor's tasks to complete
 
+    # Log the results and exceptions after the process is completed
     for fut in futures:
         if fut.exception() is not None:
             print('{}: {}'.format(fut.exception(), 'ERR'))
@@ -146,11 +146,12 @@ def get_all(urls):
             print('{}: {}'.format(fut.result(), 'OK'))
 
 
+#   Will write the notes for this part and below later
 def remove_invalids():
     global total_failed, words_added
     new_fails = total_failed
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
-    lines = re.sub(r"(\n([a-z][A-Z])*\n|)", "\n", fix_lines).replace(r"﻿", "").split("\n")
+    lines = re.sub(r"(\n([a-z][A-Z])*\n)", "\n", fix_lines).replace(r"﻿", "").split("\n")
     new_lines = []
 
     for line in lines:
@@ -196,59 +197,56 @@ def remove_invalids():
     return final_set
 
 
-ran_i = 0
+times_phon_was_run = 0
 
-
+# The main function used to request and process phonetics.
 def phon(size):
+    global times_phon_was_run
+
     dictionary_file = open(dictionary_name).read()
     dictionary = dictionary_file.split("\n")
     dict_len = len(dictionary)
 
-    global ran_i
-    ran_i += 1
-    print("Again: " + str(ran_i))
+    times_phon_was_run += 1
+    print("Again: " + str(times_phon_was_run))
     urls = get_urls(size)
     get_all(urls)
 
 
+# Used to subtract the size of any existing sets from the amount we need to find.
 new_size = size_original
-
+# Separate the file by lines to retrieve the length
 if append_or_write == "a":
     new_size -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
 
-remove_invalids()
-phon(new_size + total_failed)
-# Export csv_str as a utf-8-sig formated file separated by ","
+remove_invalids()  # Removes around 99.9% of invalid lines
+phon(new_size + total_failed)  # Run the main function
+fixed_set = remove_invalids()  # Remove invalids returns all items currently in the phonetics list
 
-text_file = codecs.open(write_file, append_or_write, "utf-8-sig")
-not_found = codecs.open(err_filename, "a")
-text_file.close()
-
-fixed_set = remove_invalids()
-
-# familypronunciation
-# pronunciation
-
+# Keep repeating the process of getting phoneme_words until all phonetics are reached.
 while len(fixed_set) < size_original:
     phon(size_original - len(fixed_set))
     fixed_set = remove_invalids()
 
-# not_found.close()
+# Log the total time the function took to run.
 total_time = time.time() - start_time
 print(total_time)
 
+# Store the time in the timing document
 time_file = codecs.open("conc_timing.txt", "a")
 time_file.write(str(total_time) + "\n")
 time_file.close()
-not_found.close()
 
+# Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 err = set(codecs.open(err_filename, "r", "utf-8-sig").read().split("\n"))
 b_write = codecs.open(dictionary_name, "w", "utf-8-sig")
 
-new_dict_set = a_dict - err
+new_dict_set = a_dict - err  # Subtract the set of errors from the beta dictionary
 
+# Write each line back to the file
 for word in new_dict_set:
     b_write.write(word + "\n")
 
+# Close out the file
 b_write.close()
