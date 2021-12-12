@@ -177,7 +177,7 @@ def remove_invalids():
             new_fails += 1
         except:
             try:
-                not_found.write(str(remove[0]) + "\n")
+                not_found.write(str(remove[0]))
                 new_fails += 1
             except:
                 print("This did not work")
@@ -240,7 +240,11 @@ time_file.close()
 # Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 b_write = codecs.open(dict_filename, "w", "utf-8-sig")
-err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
+try:
+    err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
+except:
+    err = set(codecs.open(err_filename, "r", "utf_32").read().replace("\r", "").split("\n"))
+
 err_write = codecs.open(err_filename, "w", "utf-8-sig")
 
 new_dict_set = a_dict - err  # Subtract the set of errors from the beta dictionary
