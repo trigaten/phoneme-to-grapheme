@@ -18,13 +18,15 @@ err_filename = "404s.txt"  # List of all of the known error words
 # Get current location based on operating system
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-original_size = 27300  # Change this value to change the dataset size
+original_size = 0  # Change this value to change the dataset size
 new_size = original_size  # Used to subtract the size of any existing sets from the amount needed.
 
-# Do the initial parsing of the dictionary file
+# Do the initial parsing of the dictionary filev
 dict_file = open(dict_filename).read()
 dict_list = dict_file.split("\n")
 dict_len = len(dict_list)
+
+regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r)*"
 
 write_file = "phonemes-words.csv"  # The file to write phoneme-words to
 append_or_write = "a"  # w to erase write_file and rewrite, a to append to current csv
@@ -92,9 +94,7 @@ def get_word(curr_page, word):
 
         # Check if both words are of valid lengths
         if len(phonetics) >= 1 and len(word_soup) >= 1:
-            global words_added
-            global new_size
-            global total_failed  # Total number of words added
+            global new_size, total_failed, words_added  # Total number of words added
             words_added += 1
 
             actual_word = word_soup[0].text.lower()  # Make sure all text is lowercase
@@ -116,6 +116,11 @@ def get_word(curr_page, word):
             text_file.close()
 
             print("Words Left:\t\t" + str(new_size - words_added))
+
+            # if words_added % 0 == 500:
+            #     global dict_list, fixed_set
+            #     dict_list = list(set(dict_list) - set(fixed_set))
+
             return csv_formatted  # return the formatted string line
 
         else:
@@ -147,23 +152,40 @@ def get_all(urls):
 def remove_invalids():
     new_fails = 0
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
-    lines = re.sub(r"(\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat| )*", "",
-                   fix_lines).replace(r"﻿", "").split("\n")
-    new_lines = []
 
+    global regex
+    lines = re.sub(regex, "", fix_lines).replace(r"﻿", "").split("\n")
+    init_length = len(lines)
+    new_lines = []
+    drop_lines = []
     # Recreate the original object using csv
     for line in lines:
-        new_lines.append(line.split(","))
+        split_lines = line.split(",")
+        new_lines.append(split_lines)
+
+        if len(split_lines) != 2:
+            drop_lines.append(line)
+
+    for line in drop_lines:
+        lines.remove(line)
+        print("removed: " + line)
+
 
     remove_lines = []
 
     #   Remove phonetics that looks suspicious by not being close to their word in length
     for new_line in new_lines:
-        if len(new_line) > 1 and len(new_line[0]) < (.6 * len(new_line[1]) or len(new_line[0]) > len(new_line[1])):
+        if len(new_line) == 2 and len(new_line[0]) < (.6 * len(new_line[1])):
             remove_lines.append(new_line)
 
-        elif len(new_line) <= 1:
+        elif not len(new_line) == 2:
             remove_lines.append(new_line)
+
+        else:
+            non_abc = re.match(r"[a-zA-Z]*[^a-zA-Z\d\s:][a-zA-Z]*", new_line[1])
+            if non_abc:
+                print(non_abc.group(0))
+                remove_lines.append(new_line)
 
     remove_set = set()
     remove_lines = remove_lines[:len(remove_lines) - 1]
@@ -174,13 +196,19 @@ def remove_invalids():
         try:
             remove_set.add(str(remove[0]) + "," + str(remove[1]))
             not_found.write(str(remove[1]) + "\n")
+            print("Removed: " + remove[1])
             new_fails += 1
         except:
             try:
-                not_found.write(str(remove[0]))
+                print(remove[0])
+                remove_set.add(str(remove[0]))
+                not_found.write(str(remove[0]) + "\n")
                 new_fails += 1
             except:
                 print("This did not work")
+                error = codecs.open("weird_words.txt", "a", "utf-8-sig")
+                error.write(str(remove))
+                error.close()
 
     not_found.close()
 
@@ -197,6 +225,8 @@ def remove_invalids():
         end_block.write(str(line) + "\n")
     end_block.close()
 
+    global dict_list
+    dict_list = list(set(dict_list) - final_set)
     return final_set
 
 
@@ -240,11 +270,8 @@ time_file.close()
 # Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 b_write = codecs.open(dict_filename, "w", "utf-8-sig")
-try:
-    err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
-except:
-    err = set(codecs.open(err_filename, "r", "utf_32").read().replace("\r", "").split("\n"))
-
+codecs.register_error("strict", codecs.ignore_errors)
+err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 err_write = codecs.open(err_filename, "w", "utf-8-sig")
 
 new_dict_set = a_dict - err  # Subtract the set of errors from the beta dictionary
