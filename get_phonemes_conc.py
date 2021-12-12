@@ -18,7 +18,7 @@ err_filename = "404s.txt"  # List of all of the known error words
 # Get current location based on operating system
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-original_size = 35200  # Change this value to change the dataset size
+original_size = 0  # Change this value to change the dataset size
 new_size = original_size  # Used to subtract the size of any existing sets from the amount needed.
 
 # Do the initial parsing of the dictionary filev
@@ -116,6 +116,11 @@ def get_word(curr_page, word):
             text_file.close()
 
             print("Words Left:\t\t" + str(new_size - words_added))
+
+            # if words_added % 0 == 500:
+            #     global dict_list, fixed_set
+            #     dict_list = list(set(dict_list) - set(fixed_set))
+
             return csv_formatted  # return the formatted string line
 
         else:
@@ -132,7 +137,7 @@ def get_one(url):
 
 #   The concurrent method used to retrieve all urls at a maximum rate of 20 requests
 def get_all(urls):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         futures = [executor.submit(get_one, url) for url in urls]
 
     # Log the results and exceptions after the process is completed
@@ -152,10 +157,19 @@ def remove_invalids():
     lines = re.sub(regex, "", fix_lines).replace(r"﻿", "").split("\n")
     init_length = len(lines)
     new_lines = []
-
+    drop_lines = []
     # Recreate the original object using csv
     for line in lines:
-        new_lines.append(line.split(","))
+        split_lines = line.split(",")
+        new_lines.append(split_lines)
+
+        if len(split_lines) != 2:
+            drop_lines.append(line)
+
+    for line in drop_lines:
+        lines.remove(line)
+        print("removed: " + line)
+
 
     remove_lines = []
 
@@ -181,11 +195,14 @@ def remove_invalids():
         except:
             try:
                 print(remove[0])
-                remove_set.add(remove[0])
+                remove_set.add(str(remove[0]))
                 not_found.write(str(remove[0]) + "\n")
                 new_fails += 1
             except:
                 print("This did not work")
+                error = codecs.open("weird_words.txt", "a", "utf-8-sig")
+                error.write(str(remove))
+                error.close()
 
     not_found.close()
 
@@ -202,6 +219,8 @@ def remove_invalids():
         end_block.write(str(line) + "\n")
     end_block.close()
 
+    global dict_list
+    dict_list = list(set(dict_list) - final_set)
     return final_set
 
 
@@ -245,6 +264,7 @@ time_file.close()
 # Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 b_write = codecs.open(dict_filename, "w", "utf-8-sig")
+codecs.register_error("strict", codecs.ignore_errors)
 err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 err_write = codecs.open(err_filename, "w", "utf-8-sig")
 
