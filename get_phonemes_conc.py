@@ -181,6 +181,12 @@ def remove_invalids():
         elif not len(new_line) == 2:
             remove_lines.append(new_line)
 
+        else:
+            non_abc = re.match(r"[a-zA-Z]*[^a-zA-Z\d\s:][a-zA-Z]*", new_line[1])
+            if non_abc:
+                print(non_abc.group(0))
+                remove_lines.append(new_line)
+
     remove_set = set()
     remove_lines = remove_lines[:len(remove_lines) - 1]
 
