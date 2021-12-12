@@ -147,7 +147,7 @@ def get_all(urls):
 def remove_invalids():
     new_fails = 0
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
-    lines = re.sub(r"(\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat| )*", "",
+    lines = re.sub(r"(\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat|pronouncat)*", "",
                    fix_lines).replace(r"﻿", "").split("\n")
     new_lines = []
 
@@ -159,7 +159,7 @@ def remove_invalids():
 
     #   Remove phonetics that looks suspicious by not being close to their word in length
     for new_line in new_lines:
-        if len(new_line) > 1 and len(new_line[0]) < (.6 * len(new_line[1])):
+        if len(new_line) > 1 and len(new_line[0]) < (.6 * len(new_line[1]) or len(new_line[0]) > len(new_line[1]) + 2):
             remove_lines.append(new_line)
 
         elif len(new_line) <= 1:
