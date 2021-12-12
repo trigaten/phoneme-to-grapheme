@@ -3,65 +3,55 @@ import re
 import numpy as np
 import bs4
 import codecs
-import asyncio
-import concurrent.futures
 import requests
 import time
+import concurrent.futures  # This import is important for concurrency.
 
 start_time = time.time()
 
 # Basic Background Info
 headers = {'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0"}
-original_url = "https://www.merriam-webster.com/dictionary/"  # URL to get words and phonetics from
-dictionary_name = "words_beta.txt"  # Location of the list of words used to retrieve phonetics
+base_url = "https://www.merriam-webster.com/dictionary/"  # URL to get words and phonetics from
+dict_filename = "words_beta.txt"  # `Name of the file containing many words - error
 err_filename = "404s.txt"  # List of all of the known error words
 
 # Get current location based on operating system
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-# Change this value to change the dataset size
-size_original = 1
+original_size = 27300  # Change this value to change the dataset size
+new_size = original_size  # Used to subtract the size of any existing sets from the amount needed.
 
 # Do the initial parsing of the dictionary file
-dictionary_file = open(dictionary_name).read()
-dictionary = dictionary_file.split("\n")
-dict_len = len(dictionary)
+dict_file = open(dict_filename).read()
+dict_list = dict_file.split("\n")
+dict_len = len(dict_list)
 
-# Where will the file be writing to?
-write_file = "phonemes-words.csv"
-
-# Change the "w" option to an "a" to append stringsd to the current file
-# Change the "a" option to "w" to erase the file and write to a blank file.
-append_or_write = "a"
+write_file = "phonemes-words.csv"  # The file to write phoneme-words to
+append_or_write = "a"  # w to erase write_file and rewrite, a to append to current csv
 
 words_added = 0  # Used to keep track of the total number of words added
 fixed_set = []  # Set of words added to the phonetics
-
-# Used to subtract the size of any existing sets from the amount we need to find.
-new_size = size_original
 
 # Separate the file by lines to retrieve the length
 if append_or_write == "a":
     new_size -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
 
 
-# This is the main function to get the html files of size "size"
+# This is the main function to get the urls of size "size"
 def get_urls(size):
     empty_set = set([None])  # Empty set used to remove empty sets from lists
-    rand_nums = [None] * size  # Used to prevent the same word from being included in the set more than once
     urls = [None] * size  # Indexing the urls using iterators is around 25% faster than appending
 
     # Keep adding numbers until the target size is reached
-    for i in range(size - len(set(rand_nums) - empty_set)):
+    for i in range(size):
         new_num = np.random.randint(0, high=dict_len)  # Get random number
-        rand_nums[i] = new_num  # Set random number using i as the index
-        word = dictionary[new_num]  # Use random number to retrieve from dictionary
+        word = dict_list[new_num]  # Use random number to retrieve word from dictionary
 
         # Changes the base url to include the new word to get that word from the website
-        modified_url = original_url + word
+        modified_url = base_url + word
         urls[i] = modified_url
 
-    return_set = set(urls) - set([None])  # Remove empty set and duplicates from list of urls
+    return_set = set(urls) - empty_set # Remove empty set and duplicates from list of urls
 
     # Keep getting more urls until the size is reached.
     while len(return_set) < size:
@@ -125,7 +115,7 @@ def get_word(curr_page, word):
             text_file.write(csv_formatted + "\n")
             text_file.close()
 
-            print("Words Left:\t\t" + str(new_size - words_added - total_failed))
+            print("Words Left:\t\t" + str(new_size - words_added))
             return csv_formatted  # return the formatted string line
 
         else:
@@ -133,13 +123,10 @@ def get_word(curr_page, word):
             add_err()
 
 
-import concurrent.futures  # This import is important for concurrency.
-
-
 # This method is used to request and process one url at a time
 def get_one(url):
     curr_page = requests.get(url)
-    get_word(curr_page, url.replace(original_url, ""))
+    get_word(curr_page, url.replace(base_url, ""))
     return curr_page.raise_for_status()
 
 
@@ -158,18 +145,21 @@ def get_all(urls):
 
 #   Will write the notes for this part and below later
 def remove_invalids():
-    new_fails = total_failed
+    new_fails = 0
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
     lines = re.sub(r"(\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat| )*", "",
                    fix_lines).replace(r"﻿", "").split("\n")
     new_lines = []
 
+    # Recreate the original object using csv
     for line in lines:
         new_lines.append(line.split(","))
 
     remove_lines = []
+
+    #   Remove phonetics that looks suspicious by not being close to their word in length
     for new_line in new_lines:
-        if len(new_line) > 1 and len(new_line[0]) < (.5 * len(new_line[1])):
+        if len(new_line) > 1 and len(new_line[0]) < (.6 * len(new_line[1]) or len(new_line[0]) > len(new_line[1])):
             remove_lines.append(new_line)
 
         elif len(new_line) <= 1:
@@ -179,14 +169,16 @@ def remove_invalids():
     remove_lines = remove_lines[:len(remove_lines) - 1]
 
     not_found = codecs.open(err_filename, "a")
+
     for remove in remove_lines:
         try:
             remove_set.add(str(remove[0]) + "," + str(remove[1]))
             not_found.write(str(remove[1]) + "\n")
-
+            new_fails += 1
         except:
             try:
-                not_found.write(str(remove[0]) + "\n")
+                not_found.write(str(remove[0]))
+                new_fails += 1
             except:
                 print("This did not work")
 
@@ -194,7 +186,7 @@ def remove_invalids():
 
     final_set = set(lines) - remove_set - set([""])
 
-    purged = new_fails - total_failed
+    purged = new_fails
     # words_added -= purged
 
     print("Total_Purged:\t\t" + str(purged))
@@ -208,7 +200,6 @@ def remove_invalids():
     return final_set
 
 
-fixed_set = remove_invalids()  # Removes around 99.9% of invalid lines
 times_phon_was_run = 0
 
 
@@ -220,7 +211,7 @@ def phon(size):
     words_added = total_failed = 0
 
     new_size = size
-    dictionary_file = open(dictionary_name).read()
+    dictionary_file = open(dict_filename).read()
     dictionary = dictionary_file.split("\n")
 
     times_phon_was_run += 1
@@ -228,13 +219,13 @@ def phon(size):
     urls = get_urls(size)
     get_all(urls)
 
-
+fixed_set = remove_invalids()  # Removes around 99.9% of invalid lines
 phon(new_size + total_failed)  # Run the main function
 fixed_set = remove_invalids()  # Remove invalids returns all items currently in the phonetics list
 
 # Keep repeating the process of getting phoneme_words until all phonetics are reached.
-while len(fixed_set) < size_original:
-    phon(size_original - len(fixed_set))
+while len(fixed_set) < original_size:
+    phon(original_size - len(fixed_set))
     fixed_set = remove_invalids()
 
 # Log the total time the function took to run.
@@ -248,8 +239,12 @@ time_file.close()
 
 # Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
-b_write = codecs.open(dictionary_name, "w", "utf-8-sig")
-err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
+b_write = codecs.open(dict_filename, "w", "utf-8-sig")
+try:
+    err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
+except:
+    err = set(codecs.open(err_filename, "r", "utf_32").read().replace("\r", "").split("\n"))
+
 err_write = codecs.open(err_filename, "w", "utf-8-sig")
 
 new_dict_set = a_dict - err  # Subtract the set of errors from the beta dictionary
