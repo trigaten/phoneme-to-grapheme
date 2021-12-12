@@ -8,6 +8,7 @@ import time
 import concurrent.futures  # This import is important for concurrency.
 
 start_time = time.time()
+codecs.register_error("strict", codecs.ignore_errors)
 
 # Basic Background Info
 headers = {'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0"}
@@ -15,13 +16,14 @@ merriam = "https://www.merriam-webster.com/dictionary/"
 dictionary_web = "https://www.dictionary.com/browse/"
 base_url = dictionary_web  # URL to get words and phonetics from
 
+
 dict_filename = "words_beta.txt"  # `Name of the file containing many words - error
 err_filename = "404s.txt"  # List of all of the known error words
 
 # Get current location based on operating system
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-original_size = 10000  # Change this value to change the dataset size
+original_size = 30000  # Change this value to change the dataset size
 new_size = original_size  # Used to subtract the size of any existing sets from the amount needed.
 
 # Do the initial parsing of the dictionary filev
@@ -44,6 +46,7 @@ if append_or_write == "a":
 
 # This is the main function to get the urls of size "size"
 def get_urls(size):
+    global dict_list
     empty_set = set([None])  # Empty set used to remove empty sets from lists
     urls = [None] * size  # Indexing the urls using iterators is around 25% faster than appending
 
@@ -250,18 +253,23 @@ times_phon_was_run = 0
 def phon(size):
     global new_size
     global times_phon_was_run
-    global words_added, total_failed
+    global words_added, total_failed, dict_list, dict_file
     words_added = total_failed = 0
-
+    group_size = 500
     new_size = size
-    dictionary_file = open(dict_filename).read()
-    dictionary = dictionary_file.split("\n")
 
     times_phon_was_run += 1
     print("Again: " + str(times_phon_was_run))
-    urls = get_urls(size)
-    get_all(urls)
+    rounds = int(size/group_size)
 
+    for i in range(rounds):
+        print("Round: " + str(i))
+        urls = get_urls(group_size)
+        get_all(urls)
+        remove_invalids()
+
+    urls = get_urls(size - rounds * group_size)
+    get_all(urls)
 
 fixed_set = remove_invalids()  # Removes around 99.9% of invalid lines
 phon(new_size + total_failed)  # Run the main function
@@ -284,7 +292,6 @@ time_file.close()
 # Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 b_write = codecs.open(dict_filename, "w", "utf-8-sig")
-codecs.register_error("strict", codecs.ignore_errors)
 err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 err_write = codecs.open(err_filename, "w", "utf-8-sig")
 
