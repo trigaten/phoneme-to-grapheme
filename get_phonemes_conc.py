@@ -8,17 +8,22 @@ import time
 import concurrent.futures  # This import is important for concurrency.
 
 start_time = time.time()
+codecs.register_error("strict", codecs.ignore_errors)
 
 # Basic Background Info
 headers = {'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0"}
-base_url = "https://www.merriam-webster.com/dictionary/"  # URL to get words and phonetics from
+merriam = "https://www.merriam-webster.com/dictionary/"
+dictionary_web = "https://www.dictionary.com/browse/"
+base_url = dictionary_web  # URL to get words and phonetics from
+
+
 dict_filename = "words_beta.txt"  # `Name of the file containing many words - error
 err_filename = "404s.txt"  # List of all of the known error words
 
 # Get current location based on operating system
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-original_size = 0  # Change this value to change the dataset size
+original_size = 30000  # Change this value to change the dataset size
 new_size = original_size  # Used to subtract the size of any existing sets from the amount needed.
 
 # Do the initial parsing of the dictionary filev
@@ -26,7 +31,7 @@ dict_file = open(dict_filename).read()
 dict_list = dict_file.split("\n")
 dict_len = len(dict_list)
 
-regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r)*"
+regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r|\\|\/)*"
 
 write_file = "phonemes-words.csv"  # The file to write phoneme-words to
 append_or_write = "a"  # w to erase write_file and rewrite, a to append to current csv
@@ -41,6 +46,7 @@ if append_or_write == "a":
 
 # This is the main function to get the urls of size "size"
 def get_urls(size):
+    global dict_list
     empty_set = set([None])  # Empty set used to remove empty sets from lists
     urls = [None] * size  # Indexing the urls using iterators is around 25% faster than appending
 
@@ -53,7 +59,7 @@ def get_urls(size):
         modified_url = base_url + word
         urls[i] = modified_url
 
-    return_set = set(urls) - empty_set # Remove empty set and duplicates from list of urls
+    return_set = set(urls) - empty_set  # Remove empty set and duplicates from list of urls
 
     # Keep getting more urls until the size is reached.
     while len(return_set) < size:
@@ -87,10 +93,20 @@ def get_word(curr_page, word):
     else:
 
         # Retrieve the word and phonetics from the page using bs4
-        web_result = curr_page.content  # Return the new word and page contents
-        soup = bs4.BeautifulSoup(web_result, "html.parser")
-        word_soup = soup.find_all('h1', {'class': 'hword'})
-        phonetics = soup.find_all('span', {'class': 'pr'})
+        if base_url is merriam:
+            re1 = r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat)*"
+            web_result = curr_page.content  # Return the new word and page contents
+            soup = bs4.BeautifulSoup(web_result, "html.parser")
+            word_soup = soup.find_all('h1', {'class': 'hword'})
+            phonetics = soup.find_all('span', {'class': 'pr'})
+
+        else:
+            re1 = r"(ˈ| |/)"
+            web_result = curr_page.content  # Return the new word and page contents
+            soup = bs4.BeautifulSoup(web_result, "html.parser")
+            word_soup = soup.find_all('h1', {'class': 'css-1sprl0b e1wg9v5m5'})
+            phonetics = soup.find_all('span', {'class': 'pron-ipa-content css-7iphl0 evh0tcl1'})
+            # print(str(word_soup) + "," + str(phonetics))
 
         # Check if both words are of valid lengths
         if len(phonetics) >= 1 and len(word_soup) >= 1:
@@ -105,8 +121,8 @@ def get_word(curr_page, word):
                 phonetics = phonetics.split(",")[0]
 
             # Remove all invalid characters
-            fixed_phonetics = re.sub(r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat)*", "",
-                                     phonetics)
+
+            fixed_phonetics = re.sub(re1, "",phonetics)
             # Combine the words into one line for CSV preparation
             csv_formatted = fixed_phonetics + "," + actual_word
 
@@ -170,12 +186,12 @@ def remove_invalids():
         lines.remove(line)
         print("removed: " + line)
 
-
     remove_lines = []
 
     #   Remove phonetics that looks suspicious by not being close to their word in length
     for new_line in new_lines:
-        if len(new_line) == 2 and len(new_line[0]) < (.6 * len(new_line[1])):
+        if len(new_line) == 2 and \
+                (len(new_line[0]) < (.6 * len(new_line[1])) or len(new_line[0]) > (len(new_line[1]) + 3)):
             remove_lines.append(new_line)
 
         elif not len(new_line) == 2:
@@ -212,7 +228,7 @@ def remove_invalids():
 
     not_found.close()
 
-    final_set = set(lines) - remove_set - set([""])
+    final_set = set(lines) - remove_set - set([""]) - set(["phonemes,graphemes\n"])
 
     purged = new_fails
     # words_added -= purged
@@ -237,16 +253,22 @@ times_phon_was_run = 0
 def phon(size):
     global new_size
     global times_phon_was_run
-    global words_added, total_failed
+    global words_added, total_failed, dict_list, dict_file
     words_added = total_failed = 0
-
+    group_size = 500
     new_size = size
-    dictionary_file = open(dict_filename).read()
-    dictionary = dictionary_file.split("\n")
 
     times_phon_was_run += 1
     print("Again: " + str(times_phon_was_run))
-    urls = get_urls(size)
+    rounds = int(size/group_size)
+
+    for i in range(rounds):
+        print("Round: " + str(i))
+        urls = get_urls(group_size)
+        get_all(urls)
+        remove_invalids()
+
+    urls = get_urls(size - rounds * group_size)
     get_all(urls)
 
 fixed_set = remove_invalids()  # Removes around 99.9% of invalid lines
@@ -270,7 +292,6 @@ time_file.close()
 # Update the dictionary by subtracting all words that do not work.
 a_dict = set(codecs.open("words_alpha.txt", "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 b_write = codecs.open(dict_filename, "w", "utf-8-sig")
-codecs.register_error("strict", codecs.ignore_errors)
 err = set(codecs.open(err_filename, "r", "utf-8-sig").read().replace("\r", "").split("\n"))
 err_write = codecs.open(err_filename, "w", "utf-8-sig")
 
