@@ -29,6 +29,7 @@ new_size = original_size  # Used to subtract the size of any existing sets from 
 # Do the initial parsing of the dictionary filev
 dict_file = open(dict_filename).read()
 dict_list = dict_file.split("\n")
+# dict_list = [term for  ]
 dict_len = len(dict_list)
 
 regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r|\\|\/|for\d*)*"
@@ -175,9 +176,8 @@ def remove_invalids():
 
     global regex
     re2 = r"\n(noun|pronoun|verb|adjective|adverb|preposition|conjunction|interjection)"
-    print(re.findall(re2, fix_lines))
-    fix_lines = re.sub(re2, "\n", fix_lines)
-    fix_lines = fix_lines.replace("or,", ",")
+    # print(re.findall(re2, fix_lines))
+    fix_lines = re.sub(re2, "\n", fix_lines).replace("or,", ",")
     lines = re.sub(regex, "", fix_lines).replace(r"﻿", "").split("\n")
     new_lines = []
     drop_lines = []
