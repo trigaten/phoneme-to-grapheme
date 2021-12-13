@@ -23,7 +23,7 @@ err_filename = "404s.txt"  # List of all of the known error words
 # Get current location based on operating system
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-original_size = 100000  # Change this value to change the dataset size
+original_size = 0  # Change this value to change the dataset size
 new_size = original_size  # Used to subtract the size of any existing sets from the amount needed.
 
 # Do the initial parsing of the dictionary filev
@@ -171,14 +171,14 @@ def get_all(urls):
 def remove_invalids():
     new_fails = 0
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
+    init_length = len(fix_lines.split("\n"))
 
     global regex
     re2 = r"\n(noun|pronoun|verb|adjective|adverb|preposition|conjunction|interjection)"
     print(re.findall(re2, fix_lines))
     fix_lines = re.sub(re2, "\n", fix_lines)
+    fix_lines = fix_lines.replace("or,", ",")
     lines = re.sub(regex, "", fix_lines).replace(r"﻿", "").split("\n")
-
-    init_length = len(lines)
     new_lines = []
     drop_lines = []
     # Recreate the original object using csv
@@ -237,7 +237,7 @@ def remove_invalids():
 
     final_set = set(lines) - remove_set - set([""]) - set(["phonemes,graphemes\n"])
 
-    purged = new_fails
+    purged = init_length - len(final_set)
     # words_added -= purged
 
     print("Total_Purged:\t\t" + str(purged))
