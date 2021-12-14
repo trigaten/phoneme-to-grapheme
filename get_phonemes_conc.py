@@ -23,15 +23,17 @@ err_filename = "404s.txt"  # List of all of the known error words
 # Get current location based on operating system
 fileDir = os.path.dirname(os.path.realpath('words_beta.txt'))
 
-original_size = 30000  # Change this value to change the dataset size
+original_size = 0  # Change this value to change the dataset size
 new_size = original_size  # Used to subtract the size of any existing sets from the amount needed.
 
 # Do the initial parsing of the dictionary filev
 dict_file = open(dict_filename).read()
 dict_list = dict_file.split("\n")
+# dict_list = [term for  ]
 dict_len = len(dict_list)
 
-regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r|\\|\/)*"
+regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r|\\|\/|for\d*)*"
+to_replace = r"^noun |^pronoun |^verb |^adjective |^adverb |^preposition |^conjunction |^interjection "
 
 write_file = "phonemes-words.csv"  # The file to write phoneme-words to
 append_or_write = "a"  # w to erase write_file and rewrite, a to append to current csv
@@ -52,7 +54,7 @@ def get_urls(size):
 
     # Keep adding numbers until the target size is reached
     for i in range(size):
-        new_num = np.random.randint(0, high=dict_len)  # Get random number
+        new_num = np.random.randint(0, high=len(dict_list))  # Get random number
         word = dict_list[new_num]  # Use random number to retrieve word from dictionary
 
         # Changes the base url to include the new word to get that word from the website
@@ -94,7 +96,7 @@ def get_word(curr_page, word):
 
         # Retrieve the word and phonetics from the page using bs4
         if base_url is merriam:
-            re1 = r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|pronunciationat)*"
+            re1 = r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|–|—|͟|‧|pronunciationat)*"
             web_result = curr_page.content  # Return the new word and page contents
             soup = bs4.BeautifulSoup(web_result, "html.parser")
             word_soup = soup.find_all('h1', {'class': 'hword'})
@@ -114,15 +116,17 @@ def get_word(curr_page, word):
             words_added += 1
 
             actual_word = word_soup[0].text.lower()  # Make sure all text is lowercase
-            phonetics = phonetics[0].text  # Retrieve phonetics
+            phonetics = phonetics[0].text.lower()  # Retrieve phonetics
 
             # Some phonetics have multiple pronunciation variations, we only use one
-            if "," in phonetics:
-                phonetics = phonetics.split(",")[0]
+            if "," or ";" in phonetics:
+                phonetics = phonetics.split(",")[0].split(";")[0]
+                # print("changed p: " + phonetics)
 
             # Remove all invalid characters
 
-            fixed_phonetics = re.sub(re1, "",phonetics)
+            phonetics = re.sub(to_replace, "", phonetics)
+            fixed_phonetics = re.sub(re1, "", phonetics)
             # Combine the words into one line for CSV preparation
             csv_formatted = fixed_phonetics + "," + actual_word
 
@@ -168,10 +172,13 @@ def get_all(urls):
 def remove_invalids():
     new_fails = 0
     fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
+    init_length = len(fix_lines.split("\n"))
 
     global regex
+    re2 = r"\n(noun|pronoun|verb|adjective|adverb|preposition|conjunction|interjection)"
+    # print(re.findall(re2, fix_lines))
+    fix_lines = re.sub(re2, "\n", fix_lines).replace("or,", ",")
     lines = re.sub(regex, "", fix_lines).replace(r"﻿", "").split("\n")
-    init_length = len(lines)
     new_lines = []
     drop_lines = []
     # Recreate the original object using csv
@@ -230,7 +237,7 @@ def remove_invalids():
 
     final_set = set(lines) - remove_set - set([""]) - set(["phonemes,graphemes\n"])
 
-    purged = new_fails
+    purged = init_length - len(final_set)
     # words_added -= purged
 
     print("Total_Purged:\t\t" + str(purged))
@@ -241,8 +248,12 @@ def remove_invalids():
         end_block.write(str(line) + "\n")
     end_block.close()
 
+    error_file = codecs.open(err_filename, "r", "utf-8-sig")
+    err = set(error_file.read().replace("\r", "").split("\n"))
+    error_file.close()
+
     global dict_list
-    dict_list = list(set(dict_list) - final_set)
+    dict_list = list(set(dict_list) - final_set - err)
     return final_set
 
 
@@ -255,7 +266,7 @@ def phon(size):
     global times_phon_was_run
     global words_added, total_failed, dict_list, dict_file
     words_added = total_failed = 0
-    group_size = 500
+    group_size = 1000
     new_size = size
 
     times_phon_was_run += 1
