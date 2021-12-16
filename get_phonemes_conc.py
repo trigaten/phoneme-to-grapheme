@@ -29,10 +29,11 @@ new_size = original_size  # Used to subtract the size of any existing sets from 
 # Do the initial parsing of the dictionary filev
 dict_file = open(dict_filename).read()
 dict_list = dict_file.split("\n")
-# dict_list = [term for  ]
+curr_words = []
 dict_len = len(dict_list)
 
-regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r|\\|\/|for\d*)*"
+regex = r"( |\n([a-z][A-Z])*\n|\'|\[|\]|ˈ|\+|\"|\(" \
+        r"|\)|ˌ||-|͟|¦|\||‧|͟|&|1|2|–|—|͟|‧|;|pronunciationat|\r|\\|\/|for\d*|\d)*"
 to_replace = r"^noun |^pronoun |^verb |^adjective |^adverb |^preposition |^conjunction |^interjection "
 
 write_file = "phonemes-words.csv"  # The file to write phoneme-words to
@@ -43,7 +44,9 @@ fixed_set = []  # Set of words added to the phonetics
 
 # Separate the file by lines to retrieve the length
 if append_or_write == "a":
+    temp_read = codecs.open(write_file, "r", "utf-8-sig")
     new_size -= len(codecs.open(write_file, "r", "utf-8-sig").read().split("\n"))
+    temp_read.close()
 
 
 # This is the main function to get the urls of size "size"
@@ -53,6 +56,7 @@ def get_urls(size):
     urls = [None] * size  # Indexing the urls using iterators is around 25% faster than appending
 
     # Keep adding numbers until the target size is reached
+    print(len(dict_list))
     for i in range(size):
         new_num = np.random.randint(0, high=len(dict_list))  # Get random number
         word = dict_list[new_num]  # Use random number to retrieve word from dictionary
@@ -96,14 +100,14 @@ def get_word(curr_page, word):
 
         # Retrieve the word and phonetics from the page using bs4
         if base_url is merriam:
-            re1 = r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|–|—|͟|‧|pronunciationat)*"
+            regex1 = r"( |\'|\[|\]|ˈ|\+|\"|\(|\)|ˌ||-|͟|¦|\||‧|͟|&|–|—|͟|‧|pronunciationat)*"
             web_result = curr_page.content  # Return the new word and page contents
             soup = bs4.BeautifulSoup(web_result, "html.parser")
             word_soup = soup.find_all('h1', {'class': 'hword'})
             phonetics = soup.find_all('span', {'class': 'pr'})
 
         else:
-            re1 = r"(ˈ| |/)"
+            regex1 = r"(ˈ| |/)"
             web_result = curr_page.content  # Return the new word and page contents
             soup = bs4.BeautifulSoup(web_result, "html.parser")
             word_soup = soup.find_all('h1', {'class': 'css-1sprl0b e1wg9v5m5'})
@@ -113,9 +117,13 @@ def get_word(curr_page, word):
         # Check if both words are of valid lengths
         if len(phonetics) >= 1 and len(word_soup) >= 1:
             global new_size, total_failed, words_added  # Total number of words added
-            words_added += 1
 
             actual_word = word_soup[0].text.lower()  # Make sure all text is lowercase
+
+            if actual_word in curr_words:
+                add_err()
+                return
+            words_added += 1
             phonetics = phonetics[0].text.lower()  # Retrieve phonetics
 
             # Some phonetics have multiple pronunciation variations, we only use one
@@ -126,7 +134,7 @@ def get_word(curr_page, word):
             # Remove all invalid characters
 
             phonetics = re.sub(to_replace, "", phonetics)
-            fixed_phonetics = re.sub(re1, "", phonetics)
+            fixed_phonetics = re.sub(regex1, "", phonetics)
             # Combine the words into one line for CSV preparation
             csv_formatted = fixed_phonetics + "," + actual_word
 
@@ -135,7 +143,7 @@ def get_word(curr_page, word):
             text_file.write(csv_formatted + "\n")
             text_file.close()
 
-            print("Words Left:\t\t" + str(new_size - words_added))
+            print("Words Left:\t\t" + str(new_size - words_added) + "\t\t" + csv_formatted)
 
             # if words_added % 0 == 500:
             #     global dict_list, fixed_set
@@ -156,6 +164,7 @@ def get_one(url):
 
 
 #   The concurrent method used to retrieve all urls at a maximum rate of 20 requests
+
 def get_all(urls):
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         futures = [executor.submit(get_one, url) for url in urls]
@@ -171,7 +180,10 @@ def get_all(urls):
 #   Will write the notes for this part and below later
 def remove_invalids():
     new_fails = 0
-    fix_lines = codecs.open(write_file, "r", "utf-8-sig").read()
+    read_file = codecs.open(write_file, "r", "utf-8-sig")
+    fix_lines = read_file.read()
+    read_file.close()
+
     init_length = len(fix_lines.split("\n"))
 
     global regex
@@ -179,19 +191,23 @@ def remove_invalids():
     # print(re.findall(re2, fix_lines))
     fix_lines = re.sub(re2, "\n", fix_lines).replace("or,", ",")
     lines = re.sub(regex, "", fix_lines).replace(r"﻿", "").split("\n")
+
     new_lines = []
     drop_lines = []
+
     # Recreate the original object using csv
     for line in lines:
         split_lines = line.split(",")
-        new_lines.append(split_lines)
+        if len(split_lines) == 2:
+            new_lines.append(split_lines)
 
-        if len(split_lines) != 2:
+        else:
             drop_lines.append(line)
 
     for line in drop_lines:
         lines.remove(line)
         print("removed: " + line)
+
 
     remove_lines = []
 
@@ -236,7 +252,6 @@ def remove_invalids():
     not_found.close()
 
     final_set = set(lines) - remove_set - set([""]) - set(["phonemes,graphemes\n"])
-
     purged = init_length - len(final_set)
     # words_added -= purged
 
@@ -244,16 +259,22 @@ def remove_invalids():
 
     end_block = codecs.open(write_file, "w", "utf-8-sig")
     end_block.write("phonemes,graphemes\n")
+
     for line in final_set:
-        end_block.write(str(line) + "\n")
+        end_block.write(str(line).lower() + "\n")
     end_block.close()
 
     error_file = codecs.open(err_filename, "r", "utf-8-sig")
     err = set(error_file.read().replace("\r", "").split("\n"))
     error_file.close()
 
-    global dict_list
-    dict_list = list(set(dict_list) - final_set - err)
+    global dict_list, curr_words
+    curr_words = set([word.split(",")[1] for word in final_set])
+    # print(curr_words)
+    # updated dict fil
+    new_len = set(dict_list) - curr_words
+    print(str(len(dict_list)) + "," + str(len(new_len)) + "," + str(len(new_len - err)))
+    dict_list = list((set(dict_list) - curr_words) - err)
     return final_set
 
 
