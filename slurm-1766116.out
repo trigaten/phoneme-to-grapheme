@@ -1,0 +1,8 @@
+clipgpu04.umiacs.umd.edu
+start
+Traceback (most recent call last):
+  File "/cliphomes/sschulho/phoneme-to-grapheme/python.py", line 14, in <module>
+    from torch.utils.tensorboard import SummaryWriter
+  File "/cliphomes/sschulho/miniconda/miniconda3/envs/AI-JUDGE/lib/python3.9/site-packages/torch/utils/tensorboard/__init__.py", line 1, in <module>
+    import tensorboard
+ModuleNotFoundError: No module named 'tensorboard'

@@ -3,7 +3,7 @@
 # %% [markdown]
 # # Phoneme to Grapheme Conversion with a Recurrent Generative Model 
 # This project will discuss...
-
+print("start")
 # %%
 import torch
 import torch.nn as nn
@@ -264,7 +264,7 @@ writer = SummaryWriter("tensorboard_data")
 
 _, mini_test = random_split(test, [20, len(test)-20])
 # 15 quite good
-for epoch in range(30):
+for epoch in range(15):
     tot_loss = 0
     for (in_seq, out_seq) in dataloader:
         in_seq = in_seq.squeeze(0)
@@ -314,4 +314,4 @@ print(get_0_1_accuracy(test, model))
 # %%
 model.encoder.encoder.weight_ih_l0
 
-
+torch.save(model, "THEMODEL")
