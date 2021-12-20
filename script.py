@@ -1,7 +1,3 @@
-# %% [markdown]
-# # Phoneme to Grapheme Conversion with a Recurrent Generative Model 
-# We hope the reader will appreciate the attempts at humor built in for subjective reasons.
-# This project will discuss...
 
 # %%
 # necessary imports
@@ -303,10 +299,10 @@ writer = SummaryWriter("tensorboard_data")
 # get a mini testing batch to check model accuracy on the test set
 # throughout training
 # NOTE: this is not a validation set
-_, mini_test = random_split(test, [20, len(test)-20])
+mini_test,_ = random_split(test, [20, len(test)-20])
 
 # begin training loop
-for epoch in range(EPOCHS):
+for epoch in range(30):
     tot_loss = 0
     for (in_seq, out_seq) in dataloader:
         # batch size of 1
@@ -327,7 +323,7 @@ for epoch in range(EPOCHS):
         # step and clear grads
         optimizer.step()
         optimizer.zero_grad()
-    
+    torch.save(model, "THEMODEL")
     tot_loss/=len(train)
     # record current accuracy on test set and average loss
     writer.add_scalar("tensorboard_data/acc", get_0_1_accuracy(mini_test, model), epoch)
@@ -342,35 +338,3 @@ with torch.no_grad():
 
 torch.save(model, "THEMODEL")
 print("ALL GOOD")
-# %% [markdown]
-# Well that accuracy is... okay. It might be better than the average human (when faced with 10s of thousands of words), but thats still a lot of error. 
-
-# %% [markdown]
-# ![alt text](secret_ingredient.jpg)
-
-# %%
-model.encoder.encoder.weight_ih_l0
-
-# %% [markdown]
-# # Resources
-# If the reader would like more resources related to this topic:
-# 
-# For learning the basics of RNNs, LSTMs, GRUs, attention (including Bahdanau), and seq2seq architectures, these resources are good:
-# 
-# https://www.deeplearningbook.org/contents/rnn.html
-# 
-# https://d2l.ai/chapter_recurrent-modern/seq2seq.html
-# 
-# https://d2l.ai/chapter_attention-mechanisms/bahdanau-attention.html
-# 
-# For more comprehensive tutorials that walk through the full deep learning process (including varied seq2seq architectures such as transformer), this is a good resource:
-# 
-# https://github.com/bentrevett/pytorch-seq2seq
-# 
-# These papers discuss grapheme->phoneme conversion with deep learning. This is an easier problem, but still requires complex models for high success rates:
-# 
-# https://arxiv.org/abs/2004.06338
-# 
-# https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43264.pdf
-
-
