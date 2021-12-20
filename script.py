@@ -341,6 +341,7 @@ with torch.no_grad():
     print("Test accuracy: " + str(get_0_1_accuracy(test, model)))
 
 torch.save(model, "THEMODEL")
+print("ALL GOOD")
 # %% [markdown]
 # Well that accuracy is... okay. It might be better than the average human (when faced with 10s of thousands of words), but thats still a lot of error. 
 
