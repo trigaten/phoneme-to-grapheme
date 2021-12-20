@@ -39,7 +39,7 @@ plt.bar(X, Y, 0.4, color="green")
 plt.xlabel("letter")
 plt.ylabel("average letter in each word")
 plt.title("bar chart")
-plt.savefig("ave_letter")
+plt.savefig("ave_letter.jpg")
 
 def test_accuracy (real, model):
     accuracy = {}
