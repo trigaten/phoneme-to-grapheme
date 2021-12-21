@@ -46,7 +46,7 @@ class Phoneme_Dataset(Dataset):
                 dict[len(g)] = 1
         Y = []
         for ele in dict.keys():
-            Y.appned(dict[ele])
+            Y.append(dict[ele])
         X = dict.keys()
         fig = plt.figure()
         plt.bar(X, Y, 0.4, color="green")
